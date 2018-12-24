@@ -1,0 +1,69 @@
+service: restartFargateServices
+custom:
+  snsTopic: "${self:service}-${self:provider.stage}-fargate-memory-alarms"
+  snsTopicArn: { "Fn::Join" : ["", ["arn:aws:sns:${self:provider.region}:", { "Ref" : "AWS::AccountId" }, ":${self:custom.snsTopic}" ] ]  }
+  myEnvironment:
+    CLUSTER_NAME:
+      production: "prod-railsapp"
+      staging: "staging-railsapp"
+
+provider:
+  name: aws
+  runtime: ruby2.5
+
+  stage: ${opt:stage, 'staging'}
+  region: eu-west-1
+
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - ecs:UpdateService
+      Resource: '*'
+
+functions:
+  restartFargateServices:
+    handler: handler.restart_service
+
+    events:
+      - sns: ${self:custom.snsTopic}
+
+resources:
+ Resources:
+   ApiMemoryUsageAlarm:
+     Type: AWS::CloudWatch::Alarm
+     Properties:
+       ActionsEnabled: true
+       AlarmActions:
+         - ${self:custom.snsTopicArn}
+       AlarmName: ${self:service}:${self:provider.stage}:ApiMemoryUsageAlarm
+       ComparisonOperator: GreaterThanOrEqualToThreshold
+       Dimensions:
+         - Name: ClusterName
+           Value: ${self:custom.myEnvironment.CLUSTER_NAME.${self:provider.stage}}
+         - Name: ServiceName
+           Value: api
+       EvaluationPeriods: 2
+       MetricName: MemoryUtilization
+       Namespace: AWS/ECS
+       Period: 120
+       Statistic: Maximum
+       Threshold: 85.0
+   AdminMemoryUsageAlarm:
+     Type: AWS::CloudWatch::Alarm
+     Properties:
+       ActionsEnabled: true
+       AlarmActions:
+         - ${self:custom.snsTopicArn}
+       AlarmName: ${self:service}:${self:provider.stage}:AdminMemoryUsageAlarm
+       ComparisonOperator: GreaterThanOrEqualToThreshold
+       Dimensions:
+         - Name: ClusterName
+           Value: ${self:custom.myEnvironment.CLUSTER_NAME.${self:provider.stage}}
+         - Name: ServiceName
+           Value: admin
+       EvaluationPeriods: 2
+       MetricName: MemoryUtilization
+       Namespace: AWS/ECS
+       Period: 120
+       Statistic: Maximum
+       Threshold: 85.0
