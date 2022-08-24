@@ -1,5 +1,7 @@
 # restart-fargate-services
 
+**DEPRECATED DO NOT USE OR UPDATE**
+
 This is a small Serverless Framework application that will restart a given AWS Fargate Service once it goes over an 85% memory usage.
 
 As Rails applications tend to have memory leaks, and AWS Fargate has a hard memory limit when it comes to the tasks you can run on it,
